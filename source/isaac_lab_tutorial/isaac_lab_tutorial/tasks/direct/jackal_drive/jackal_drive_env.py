@@ -14,6 +14,7 @@ from isaaclab.assets import Articulation
 from isaaclab.envs import DirectRLEnv
 from isaaclab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from .jackal_drive_env_cfg import JackalDriveEnvCfg
+from isaaclab.sensors import TiledCamera, Camera
 
 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
@@ -44,9 +45,11 @@ class JackalDriveEnv(DirectRLEnv):
     def __init__(self, cfg: JackalDriveEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
         self.dof_idx, _ = self.robot.find_joints(self.cfg.dof_names)
+        self.plot_cam = False
 
     def _setup_scene(self):
         self.robot = Articulation(self.cfg.robot_cfg)
+        self.tiled_camera = TiledCamera(self.cfg.tiled_camera)
         # add ground plane
         spawn_ground_plane(prim_path="/World/ground", cfg=GroundPlaneCfg())
         # clone and replicate
@@ -57,6 +60,10 @@ class JackalDriveEnv(DirectRLEnv):
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
 
+        # sensors bumblebee_stereo_left_camera, bumblebee_stereo_right_camera
+        # lidar path "{ENV_REGEX_NS}/Robot/base_link/sick_lms1xx_lidar_frame/Lidar",
+
+        # sensors?
         self.visualization_markers = define_markers()
 
         # setting aside useful variables for later
@@ -106,8 +113,26 @@ class JackalDriveEnv(DirectRLEnv):
 
     def _get_observations(self) -> dict:
         self.velocity = self.robot.data.root_com_vel_w
-        self.forwards = math_utils.quat_apply(self.robot.data.root_link_quat_w, self.robot.data.FORWARD_VEC_B)
+        print(f"[DEBUG] scene {self.scene}")
+        data_type = "rgb"
+        print(f"[DEBUG] tiled_camera shape {self.tiled_camera.data.output[data_type].shape}")
+        print(f"[DEBUG] tiled_camera {self.tiled_camera.data.output[data_type]}")
 
+        if self.plot_cam:
+            import matplotlib.pyplot as plt
+
+            img_test = self.tiled_camera.data.output[data_type][1].cpu()
+            # image_np = img_test.permute(1, 2, 0).numpy()
+            image_np = img_test.numpy()
+            print(image_np.shape)
+
+            # Display the image
+            plt.imshow(image_np)
+            plt.show()
+
+        # print(f"[DEBUG] robot keys {self.robot.keys()}")
+        self.forwards = math_utils.quat_apply(self.robot.data.root_link_quat_w, self.robot.data.FORWARD_VEC_B)
+        # print(f"[DEBUG] forward {self.forwards}")
         dot = torch.sum(self.forwards * self.commands, dim=-1, keepdim=True)
         cross = torch.cross(self.forwards, self.commands, dim=-1)[:, -1].reshape(-1, 1)
         forward_speed = self.robot.data.root_com_lin_vel_b[:, 0].reshape(-1, 1)
@@ -145,7 +170,8 @@ class JackalDriveEnv(DirectRLEnv):
         minus = lzero[:, 0] * lzero[:, 1]
         offsets = torch.pi * plus - torch.pi * minus
         self.yaws[env_ids] = torch.atan(ratio).reshape(-1, 1) + offsets.reshape(-1, 1)
-
+        # self.yaws[env_ids] = torch.atan2(self.commands[env_ids][:, 1], (self.commands[env_ids][:, 0] + 1E-8))
+        print("[DEBUG]", self.yaws[env_ids], torch.atan2(self.commands[env_ids][:, 1], (self.commands[env_ids][:, 0] + 1E-8)))
         # set the root state for the reset envs
         default_root_state = self.robot.data.default_root_state[env_ids]
         default_root_state[:, :3] += self.scene.env_origins[env_ids]

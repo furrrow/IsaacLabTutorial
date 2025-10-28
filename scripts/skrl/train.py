@@ -8,6 +8,8 @@ Script to train RL agent with skrl.
 
 Visit the skrl documentation (https://skrl.readthedocs.io) to see the examples structured in
 a more user-friendly way.
+task name
+Template-Isaac-Lab-Tutorial-Direct-v0
 """
 
 """Launch Isaac Sim Simulator first."""

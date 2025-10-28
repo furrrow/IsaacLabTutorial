@@ -136,3 +136,11 @@ Some examples of packages that can likely be excluded are:
 "<path-to-isaac-sim>/extscache/omni.services.*"     // Services tools
 ...
 ```
+
+
+#### notes
+joints for the jackal:
+ ['left_wheel_joint', 'right_wheel_joint']
+```bash
+python scripts/random_agent.py --task Template-Jackal-Drive-v0 --enable_cameras
+```
