@@ -12,6 +12,7 @@ Robots/Clearpath/Jackal/jackal_basic.usd
 Robots/Clearpath/RidgebackFranka/ridgeback_franka.usd
 """
 
+print(f"ISAAC_NUCLEUS_DIR: {ISAAC_NUCLEUS_DIR}")
 JACKAL_CONFIG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(usd_path=f"{ISAAC_NUCLEUS_DIR}/Robots/Clearpath/Jackal/jackal.usd"),
     actuators={"wheel_acts": ImplicitActuatorCfg(joint_names_expr=[".*"], damping=None, stiffness=None)},

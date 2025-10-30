@@ -14,7 +14,7 @@ from isaaclab.assets import Articulation
 from isaaclab.envs import DirectRLEnv
 from isaaclab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from .jackal_drive_env_cfg import JackalDriveEnvCfg
-from isaaclab.sensors import TiledCamera, Camera
+from isaaclab.sensors import TiledCamera, Camera, RayCaster
 
 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
@@ -46,10 +46,12 @@ class JackalDriveEnv(DirectRLEnv):
         super().__init__(cfg, render_mode, **kwargs)
         self.dof_idx, _ = self.robot.find_joints(self.cfg.dof_names)
         self.plot_cam = False
+        self.plot_ray = False
 
     def _setup_scene(self):
         self.robot = Articulation(self.cfg.robot_cfg)
         self.tiled_camera = TiledCamera(self.cfg.tiled_camera)
+        # self.lidar = RayCaster(self.cfg.ray_caster)
         # add ground plane
         spawn_ground_plane(prim_path="/World/ground", cfg=GroundPlaneCfg())
         # clone and replicate
@@ -113,10 +115,12 @@ class JackalDriveEnv(DirectRLEnv):
 
     def _get_observations(self) -> dict:
         self.velocity = self.robot.data.root_com_vel_w
-        print(f"[DEBUG] scene {self.scene}")
         data_type = "rgb"
         print(f"[DEBUG] tiled_camera shape {self.tiled_camera.data.output[data_type].shape}")
-        print(f"[DEBUG] tiled_camera {self.tiled_camera.data.output[data_type]}")
+        # raycaster keys: pos_w, quat_w, ray_hits_w
+        # print(f"[DEBUG] ray_caster data pos_w {self.lidar.data.pos_w.shape}")
+        # print(f"[DEBUG] ray_caster data quat_w {self.lidar.data.quat_w.shape}")
+        # print(f"[DEBUG] ray_caster data ray_hits_w {self.lidar.data.ray_hits_w.shape}")
 
         if self.plot_cam:
             import matplotlib.pyplot as plt
@@ -129,6 +133,18 @@ class JackalDriveEnv(DirectRLEnv):
             # Display the image
             plt.imshow(image_np)
             plt.show()
+
+        if self.plot_ray:
+            import open3d as o3d
+            ray_test = self.lidar.data.ray_hits_w[1].cpu()
+            print(ray_test)
+            pcd = o3d.geometry.PointCloud()
+            pcd.points = o3d.utility.Vector3dVector(ray_test.numpy()[0:10])
+            o3d.visualization.draw_geometries([pcd],
+                                              zoom=0.3412,
+                                              front=[0.4257, -0.2125, -0.8795],
+                                              lookat=[2.6172, 2.0475, 1.532],
+                                              up=[-0.0694, -0.9768, 0.2024])
 
         # print(f"[DEBUG] robot keys {self.robot.keys()}")
         self.forwards = math_utils.quat_apply(self.robot.data.root_link_quat_w, self.robot.data.FORWARD_VEC_B)

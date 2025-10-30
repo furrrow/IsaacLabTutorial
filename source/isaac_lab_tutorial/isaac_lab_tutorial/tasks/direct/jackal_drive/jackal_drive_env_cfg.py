@@ -10,7 +10,7 @@ from isaaclab.envs import DirectRLEnvCfg
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sim import SimulationCfg
 from isaaclab.utils import configclass
-from isaaclab.sensors import CameraCfg, TiledCameraCfg
+from isaaclab.sensors import CameraCfg, TiledCameraCfg, RayCasterCfg, patterns
 
 @configclass
 class JackalDriveEnvCfg(DirectRLEnvCfg):
@@ -36,7 +36,17 @@ class JackalDriveEnvCfg(DirectRLEnvCfg):
         width=640,
         height=480,
     )
-
+    ray_caster = RayCasterCfg(
+        prim_path="/World/envs/env_.*/Robot/base_link/sick_lms1xx_lidar_frame/Lidar",
+        update_period=1 / 60,
+        offset=RayCasterCfg.OffsetCfg(pos=(0.12, 0, 0.333)),
+        mesh_prim_paths=["/World/ground"],
+        ray_alignment="yaw",
+        pattern_cfg=patterns.LidarPatternCfg(
+            channels=100, vertical_fov_range=[-90, 90], horizontal_fov_range=[-90, 90], horizontal_res=1.0
+        ),
+            debug_vis=True,
+    )
     # camera = CameraCfg(
     #     prim_path="{ENV_REGEX_NS}/Robot/base_link/bumblebee_stereo_camera_frame/"
     #               "bumblebee_stereo_left_frame/bumblebee_stereo_left_camera",
